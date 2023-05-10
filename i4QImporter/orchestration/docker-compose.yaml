@@ -1,0 +1,43 @@
+version: "3.7"
+
+services:
+
+  db:
+    image: timescale/timescaledb-ha:pg14-latest
+    container_name: i4q_timescaledb
+    restart: always
+    environment:
+      - POSTGRES_DB=i4q_factor
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=admin
+    volumes:
+    - timescale_data:/var/lib/postgresql/data
+    - ../../subsystems/timescale/0_init.sql:/docker-entrypoint-initdb.d/0_init.sql
+    ports:
+      - '5001:5001'
+    command:
+      -p 5001
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  importer:
+    build:
+      context: ../../subsystems/Importer
+    container_name: importer
+    restart: always
+    depends_on:
+        - "db"
+    links:
+        - "db:timescale"
+    ports:
+      - "5001:5001"
+    volumes:
+        - ../../subsystems/Importer/data:/data
+
+volumes:
+  timescale_data:
+  grafana_data:
